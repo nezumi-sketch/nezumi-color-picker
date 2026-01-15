@@ -7,6 +7,7 @@
 
 `nezumi-color-picker` は、シンプルで軽量な **カラーピッカー UI** をブラウザ上で表示するモジュールです。
 ダイアログ形式で表示され、HEX、RGBA、HSLA の色情報を取得・変更できます。
+<img width="872" height="1057" alt="image" src="https://github.com/user-attachments/assets/0b5fe959-e54c-46e9-b5e0-42056bb8bb5d" />
 
 ---
 
