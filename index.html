@@ -1,0 +1,30 @@
+<html>
+    <head>
+        <title>nezumi-color-picker-test-page</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <h1>nezumi-color-picker-test-page</h1>
+        <!-- The placeholder div was removed – the dialog will be created dynamically -->
+        <input type="button" id="test-input" value="#00ff00">
+        <script type="module">
+            import { showColorPickerDialog } from './src/nezumi-color-pickerDialog.js';
+            document.getElementById('test-input').addEventListener('click', () => {
+                showColorPickerDialog({
+                    color: document.getElementById('test-input').value,
+                    alpha: 1.0,
+                    onChange: ({h, s, l, a, hex, rgba}) => {
+                        console.log(`HSLA: ${h}, ${s}, ${l}, ${a}`);
+                        console.log(`RGBA: ${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3]}`);
+                        console.log(`HEX: ${hex}`);
+                        document.getElementById('test-input').value = hex;
+                    },
+                    onClose: () => {
+                        console.log("Color picker closed.");
+                    }
+                });
+            });
+        </script>
+    </body>
+</html>
