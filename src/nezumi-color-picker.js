@@ -273,4 +273,233 @@ class ColorPicker {
   }
 }
 
+// =====================
+// カラーピッカー（リング＋SL＋Alpha）
+// =====================
+class ColorPickerCanvas {
+  constructor(canvas, callback){
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d', { willReadFrequently:true });
+    this.width = canvas.width;
+    this.height = canvas.height;
+
+    this.hue = 0;      // 0-360
+    this.sat = 50;     // 0-100
+    this.light = 50;   // 0-100
+    this.alpha = 1;    // 0-1
+
+    this.callback = callback; // 値変更時コールバック
+
+    this.draw(); 
+  }
+
+  setColor(h,s,l,a){
+    this.hue = h; this.sat = s; this.light = l; this.alpha = a;
+    this.draw();
+    if(this.callback) this.callback(this.hue, this.sat, this.light, this.alpha);
+  }
+
+  draw(){
+    this.ctx.clearRect(0,0,this.width,this.height);
+    // ここにリング+SL+アルファ描画ロジックを入れる（省略）
+    this.ctx.fillStyle = `hsla(${this.hue},${this.sat}%,${this.light}%,${this.alpha})`;
+    this.ctx.fillRect(10,10,50,50); // 色サンプル表示
+  }
+
+  getColorHSLA(){ return `hsla(${this.hue},${this.sat}%,${this.light}%,${this.alpha})`; }
+  getColorRGBA(){ /* 省略: 先ほどの計算 */ }
+}
+
+// =====================
+// カラースライダー4本
+// =====================
+class ColorPickerSliders {
+  constructor(canvas, h=0,s=50,l=50,a=1, callback){
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.width = canvas.width;
+    this.height = canvas.height;
+
+    this.hue = h; this.sat = s; this.light = l; this.alpha = a;
+    this.callback = callback;
+
+    this.dragging = null; // "h","s","l","a"
+    this.sliderWidth = 200; this.sliderHeight = 20;
+    this.startX = 20; this.startY = 20;
+    this.gap = 30;
+
+    this.addEvents();
+    this.draw();
+  }
+
+  setColor(h,s,l,a){
+    this.hue=h; this.sat=s; this.light=l; this.alpha=a;
+    this.draw();
+    if(this.callback) this.callback(this.hue,this.sat,this.light,this.alpha);
+  }
+
+  draw(){
+    const ctx = this.ctx;
+    ctx.clearRect(0,0,this.width,this.height);
+    let y=this.startY;
+
+    // H
+    let gradH = ctx.createLinearGradient(this.startX,0,this.startX+this.sliderWidth,0);
+    for(let i=0;i<=360;i+=60) gradH.addColorStop(i/360, `hsl(${i},${this.sat}%,${this.light}%)`);
+    ctx.fillStyle = gradH; ctx.fillRect(this.startX,y,this.sliderWidth,this.sliderHeight); ctx.strokeRect(this.startX,y,this.sliderWidth,this.sliderHeight);
+    // Hポインター
+    const hPointerX = this.startX + (this.hue/360)*this.sliderWidth;
+    this.drawPointer(ctx, hPointerX, y, this.sliderHeight);
+    y+=this.gap;
+
+    // S
+    let gradS = ctx.createLinearGradient(this.startX,0,this.startX+this.sliderWidth,0);
+    gradS.addColorStop(0, `hsl(${this.hue},0%,${this.light}%)`);
+    gradS.addColorStop(1, `hsl(${this.hue},100%,${this.light}%)`);
+    ctx.fillStyle=gradS; ctx.fillRect(this.startX,y,this.sliderWidth,this.sliderHeight); ctx.strokeRect(this.startX,y,this.sliderWidth,this.sliderHeight);
+    // Sポインター
+    const sPointerX = this.startX + (this.sat/100)*this.sliderWidth;
+    this.drawPointer(ctx, sPointerX, y, this.sliderHeight);
+    y+=this.gap;
+
+    // L
+    let gradL = ctx.createLinearGradient(this.startX,0,this.startX+this.sliderWidth,0);
+    gradL.addColorStop(0, `hsl(${this.hue},${this.sat}%,0%)`);
+    gradL.addColorStop(0.5, `hsl(${this.hue},${this.sat}%,50%)`);
+    gradL.addColorStop(1, `hsl(${this.hue},${this.sat}%,100%)`);
+    ctx.fillStyle=gradL; ctx.fillRect(this.startX,y,this.sliderWidth,this.sliderHeight); ctx.strokeRect(this.startX,y,this.sliderWidth,this.sliderHeight);
+    // Lポインター
+    const lPointerX = this.startX + (this.light/100)*this.sliderWidth;
+    this.drawPointer(ctx, lPointerX, y, this.sliderHeight);
+    y+=this.gap;
+
+    // A
+    let gradA = ctx.createLinearGradient(this.startX,0,this.startX+this.sliderWidth,0);
+    gradA.addColorStop(0, `hsla(${this.hue},${this.sat}%,${this.light}%,0)`);
+    gradA.addColorStop(1, `hsla(${this.hue},${this.sat}%,${this.light}%,1)`);
+    ctx.fillStyle=gradA; ctx.fillRect(this.startX,y,this.sliderWidth,this.sliderHeight); ctx.strokeRect(this.startX,y,this.sliderWidth,this.sliderHeight);
+    // Aポインター
+    const aPointerX = this.startX + this.alpha*this.sliderWidth;
+    this.drawPointer(ctx, aPointerX, y, this.sliderHeight);
+  }
+
+  drawPointer(ctx, x, y, height){
+    const pointerSize = 8;
+    // 黒い三角形ポインター（上）
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.moveTo(x-pointerSize/2, y-pointerSize);
+    ctx.lineTo(x+pointerSize/2, y-pointerSize);
+    ctx.lineTo(x, y);
+    ctx.fill();
+    // 白い三角形ポインター（下）
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(x-pointerSize/2, y+height);
+    ctx.lineTo(x+pointerSize/2, y+height);
+    ctx.lineTo(x, y+height+pointerSize);
+    ctx.fill();
+  }
+
+  addEvents(){
+    this.canvas.addEventListener('mousedown', e=>this.onPointerDown(e));
+    this.canvas.addEventListener('mousemove', e=>this.onPointerMove(e));
+    this.canvas.addEventListener('mouseup', e=>this.onPointerUp());
+    this.canvas.addEventListener('mouseleave', e=>this.onPointerUp());
+    
+    this.canvas.addEventListener('touchstart', e=>this.onPointerDown(e), {passive:false});
+    this.canvas.addEventListener('touchmove', e=>this.onPointerMove(e), {passive:false});
+    this.canvas.addEventListener('touchend', e=>this.onPointerUp());
+    this.canvas.addEventListener('touchcancel', e=>this.onPointerUp());
+  }
+
+  getSliderAt(x,y){
+    let top=this.startY;
+    if(y>=top && y<=top+this.sliderHeight) return "h";
+    top+=this.gap;
+    if(y>=top && y<=top+this.sliderHeight) return "s";
+    top+=this.gap;
+    if(y>=top && y<=top+this.sliderHeight) return "l";
+    top+=this.gap;
+    if(y>=top && y<=top+this.sliderHeight) return "a";
+    return null;
+  }
+
+  onPointerDown(e){
+    e.preventDefault();
+    const {x,y}=this.getPos(e);
+    this.dragging = this.getSliderAt(x,y);
+    if(this.dragging) this.updateValue(x);
+  }
+  onPointerMove(e){
+    if(!this.dragging) return;
+    e.preventDefault();
+    const {x} = this.getPos(e);
+    this.updateValue(x);
+  }
+  onPointerUp(){ this.dragging=null; }
+
+  getPos(e){
+    let clientX, clientY;
+    if(e.touches && e.touches.length){
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    const rect=this.canvas.getBoundingClientRect();
+    return {x:(clientX-rect.left), y:(clientY-rect.top)};
+  }
+
+  updateValue(x){
+    const v = Math.min(1, Math.max(0,(x-this.startX)/this.sliderWidth));
+    switch(this.dragging){
+      case "h": this.hue = v*360; break;
+      case "s": this.sat = v*100; break;
+      case "l": this.light = v*100; break;
+      case "a": this.alpha = v; break;
+    }
+    this.draw();
+    if(this.callback) this.callback(this.hue,this.sat,this.light,this.alpha);
+  }
+
+  getColorHSLA() {
+  return `hsla(${this.hue},${this.sat}%,${this.light}%,${this.alpha})`;
+}
+
+getColorHSLAArray() {
+  return [this.hue, this.sat, this.light, this.alpha];
+}
+
+getColorRGBA() {
+  const h = this.hue/360;
+  const s = this.sat/100;
+  const l = this.light/100;
+  let r,g,b;
+  if(s===0){
+    r=g=b=l;
+  } else {
+    const q = l<0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l-q;
+    const hue2rgb=(p,q,t)=>{
+      if(t<0) t+=1;
+      if(t>1) t-=1;
+      if(t<1/6) return p+(q-p)*6*t;
+      if(t<1/2) return q;
+      if(t<2/3) return p+(q-p)*(2/3-t)*6;
+      return p;
+    };
+    r=hue2rgb(p,q,h+1/3);
+    g=hue2rgb(p,q,h);
+    b=hue2rgb(p,q,h-1/3);
+  }
+  r=Math.round(r*255);
+  g=Math.round(g*255);
+  b=Math.round(b*255);
+  return [r,g,b,this.alpha];
+}
+}
+
 export default ColorPicker;
+export { ColorPickerCanvas, ColorPickerSliders };
